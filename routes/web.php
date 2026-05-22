@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\IncidentController;
+use App\Http\Controllers\UserController;
 
 // Rute root '/' langsung mendeteksi status login tanpa perantara middleware internal
 Route::get('/', function () {
@@ -40,11 +41,19 @@ Route::middleware('auth')->group(function () {
 
     // KELOMPOK HAK AKSES ADMINISTRATOR
     Route::middleware('role:admin')->prefix('admin')->group(function () {
+        // Dashboard Beranda Admin
         Route::get('/dashboard', function () {
             return view('admin.dashboard');
         })->name('admin.dashboard');
         
+        // Kontrol Aksi Manajemen Log Insiden
         Route::put('/incidents/{id}', [IncidentController::class, 'update'])->name('incidents.update');
         Route::delete('/incidents/{id}', [IncidentController::class, 'destroy'])->name('incidents.destroy');
+
+        // TAMBAHAN BARU: Kontrol CRUD Manajemen Kelola Pengguna (Admin Only)
+        Route::get('/users', [UserController::class, 'index'])->name('admin.users.index');
+        Route::post('/users', [UserController::class, 'store'])->name('admin.users.store');
+        Route::put('/users/{id}', [UserController::class, 'update'])->name('admin.users.update');
+        Route::delete('/users/{id}', [UserController::class, 'destroy'])->name('admin.users.destroy');
     });
 });
