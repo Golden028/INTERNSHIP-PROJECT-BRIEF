@@ -1,0 +1,47 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+    // 1. Tabel Incident Logs
+    Schema::create('incident_logs', function (Blueprint $table) {
+        $table->id();
+        $table->string('title', 150);
+        $table->text('description')->nullable();
+        $table->string('severity_level', 20); // 'Normal', 'Warning', 'Critical'
+        $table->string('status', 20)->default('Open'); // 'Open', 'In Progress', 'Resolved'
+        $table->unsignedBigInteger('reported_by')->nullable();
+        $table->timestamp('created_at')->useCurrent();
+        $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+        $table->timestamp('deleted_at')->nullable(); // Soft-delete mechanism
+    });
+
+    // 2. Tabel Audit Trails
+    Schema::create('audit_trails', function (Blueprint $table) {
+        $table->id();
+        $table->string('table_name', 50);
+        $table->string('action', 10); // 'INSERT', 'UPDATE', 'SOFT_DELETE'
+        $table->unsignedBigInteger('record_id');
+        $table->json('old_values')->nullable();
+        $table->json('new_values')->nullable();
+        $table->unsignedBigInteger('performed_by')->nullable();
+        $table->timestamp('created_at')->useCurrent();
+    });
+
+    // 3. Perbaikan NFR-1: Gunakan Standard Indexing yang kompatibel dengan MariaDB/MySQL XAMPP
+    DB::statement('CREATE INDEX idx_incidents_priority ON incident_logs (severity_level, status)');
+    DB::statement('CREATE INDEX idx_incidents_created ON incident_logs (created_at DESC)');
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('audit_trails');
+        Schema::dropIfExists('incident_logs');
+    }
+};
