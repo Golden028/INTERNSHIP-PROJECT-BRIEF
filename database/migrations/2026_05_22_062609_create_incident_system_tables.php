@@ -9,7 +9,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // 1. Tabel Incident Logs (Sudah Mendukung room_id, reported_by_name, dan status alur kerja)
+        // 1. Tabel Incident Logs
         Schema::create('incident_logs', function (Blueprint $table) {
             $table->id();
             $table->string('room_id', 50)->nullable(); // Tambahan Lapangan: Ruang 1 - Ruang 5
@@ -17,7 +17,12 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->string('severity_level', 20); // 'Normal', 'Warning', 'Critical'
             $table->string('status', 20)->default('Open'); // 'Open', 'In Progress', 'Resolved'
-            $table->string('reported_by_name', 100)->nullable(); // Menangkap Otomatis Nama Akun yang Login
+            
+            // --- MODIFIKASI/TAMBAHAN DI SINI ---
+            $table->string('reported_by_name'); // WAJIB ADA: Menyimpan string nama pelapor untuk UI Blade
+            $table->foreignId('performed_by')->nullable()->constrained('users')->onDelete('set null'); // Menangkap ID akun untuk relasi data personal user
+            // ------------------------------------
+
             $table->unsignedBigInteger('reported_by')->nullable(); // ID User Relasional (Opsional)
             $table->timestamp('created_at')->useCurrent();
             $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
@@ -38,7 +43,7 @@ return new class extends Migration
 
         // 3. Optimasi Database dengan Standard Indexing (Kompatibel dengan MariaDB/MySQL XAMPP)
         DB::statement('CREATE INDEX idx_incidents_priority ON incident_logs (severity_level, status)');
-        DB::statement('CREATE INDEX idx_incidents_room ON incident_logs (room_id)');
+            DB::statement('CREATE INDEX idx_incidents_room ON incident_logs (room_id)');
         DB::statement('CREATE INDEX idx_incidents_created ON incident_logs (created_at DESC)');
     }
 

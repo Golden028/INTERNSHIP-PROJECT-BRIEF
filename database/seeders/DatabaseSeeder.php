@@ -5,13 +5,17 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema; // WAJIB TAMBAHKAN INI
 use Carbon\Carbon;
 
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // Kosongkan tabel users terlebih dahulu
+        // 1. Matikan pengecekan foreign key constraint sementara
+        Schema::disableForeignKeyConstraints();
+
+        // Kosongkan tabel users terlebih dahulu (Sekarang aman dari error 1701)
         DB::table('users')->truncate();
 
         // Akun Administrator
@@ -31,5 +35,8 @@ class DatabaseSeeder extends Seeder
             'role' => 'user',
             'created_at' => Carbon::now(),
         ]);
+
+        // 2. Hidupkan kembali pengecekan foreign key constraint
+        Schema::enableForeignKeyConstraints();
     }
 }

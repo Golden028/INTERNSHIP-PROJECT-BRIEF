@@ -31,6 +31,7 @@ Route::middleware('auth')->group(function () {
     // Menu Utama Log Insiden Bersama (Dapat diakses Admin maupun User)
     Route::get('/incidents', [IncidentController::class, 'index'])->name('incidents.index');
     Route::post('/incidents', [IncidentController::class, 'store'])->name('incidents.store');
+    Route::get('/incidents/export', [IncidentController::class, 'export'])->name('incidents.export');
 
     // KELOMPOK HAK AKSES USER LAPANGAN
     Route::middleware('role:user')->prefix('user')->group(function () {
@@ -55,5 +56,6 @@ Route::middleware('auth')->group(function () {
         Route::post('/users', [UserController::class, 'store'])->name('admin.users.store');
         Route::put('/users/{id}', [UserController::class, 'update'])->name('admin.users.update');
         Route::delete('/users/{id}', [UserController::class, 'destroy'])->name('admin.users.destroy');
+        Route::get('/users/export', [UserController::class, 'export'])->name('admin.users.export');
     });
 });

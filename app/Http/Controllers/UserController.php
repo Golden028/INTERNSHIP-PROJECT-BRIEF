@@ -120,4 +120,50 @@ class UserController extends Controller
 
         return redirect()->route('admin.users.index')->with('success', 'Akun pengguna berhasil dihapus dari sistem!');
     }
+
+    // ==========================================
+    // TAMBAHAN BARU: METHOD UNTUK DOWNLOAD EXCEL (CSV STREAM)
+    // ==========================================
+    public function export()
+    {
+        // Ambil seluruh data pengguna dari tabel users, diurutkan dari yang paling baru terdaftar
+        $users = DB::table('users')->orderBy('created_at', 'desc')->get();
+        $filename = 'Daftar Pengguna Sistem ' . date('Ymd His') . '.csv';
+
+        // Set Headers HTTP untuk memaksa file diunduh langsung sebagai file Excel/CSV
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Pragma' => 'no-cache',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0'
+        ];
+
+        // Definisikan proses stream data agar hemat RAM server
+        $callback = function() use ($users) {
+            $file = fopen('php://output', 'w');
+            
+            // Masukkan Byte Order Mark (BOM) UTF-8 agar Excel langsung membaca separator koma dan teks tanpa berantakan
+            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+
+            // Set Header baris judul pertama di spreadsheet Excel
+            fputcsv($file, ['ID User', 'Nama Lengkap', 'Email Akun', 'Peran Hak Akses', 'Waktu Pendaftaran']);
+
+            // Looping data pengguna, konversi created_at ke format string pendek ramah ukuran kolom excel (no ######)
+            foreach ($users as $user) {
+                fputcsv($file, [
+                    $user->id,
+                    $user->name,
+                    $user->email,
+                    $user->role === 'admin' ? 'Administrator' : 'User (Staf Lapangan)',
+                    $user->created_at ? date('d-m-Y H:i', strtotime($user->created_at)) : '-'
+                ]);
+            }
+            
+            fclose($file);
+        };
+
+        // Kembalikan stream response ke browser
+        return response()->stream($callback, 200, $headers);
+    }
 }
