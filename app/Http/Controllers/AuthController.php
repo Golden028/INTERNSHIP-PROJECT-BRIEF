@@ -21,19 +21,17 @@ class AuthController extends Controller
             'password' => 'required',
         ]);
 
-        // Cari user dengan Raw Query Builder
         $user = DB::table('users')->where('email', $credentials['email'])->first();
 
         if ($user && Hash::check($credentials['password'], $user->password)) {
-            // Lakukan login manual ke session auth guard Laravel
             Auth::loginUsingId($user->id);
             $request->session()->regenerate();
 
-            // Redirect berdasarkan peran (Role Redirection)
+            // REDIRECT LANGSUNG KE BERANDA KOSONG RE-DESAIN BARU
             if ($user->role === 'admin') {
-                return redirect()->route('admin.dashboard');
+                return redirect()->route('admin.dashboard'); // Menuju ke /admin/dashboard
             }
-            return redirect()->route('incidents.index');
+            return redirect()->route('incidents.dashboard'); // Menuju ke /user/dashboard
         }
 
         return back()->withErrors(['email' => 'Email atau password salah!'])->onlyInput('email');

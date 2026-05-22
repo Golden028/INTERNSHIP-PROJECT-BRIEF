@@ -11,9 +11,16 @@ class RoleMiddleware
 {
     public function handle(Request $request, Closure $next, string $role): Response
     {
-        if (!Auth::check() || Auth::user()->role !== $role) {
-            // Jika bukan admin, tendang kembali ke dashboard user
-            return redirect('/')->with('error', 'Akses ditolak! Anda tidak memiliki izin administratif.');
+        // 1. Jika belum login sama sekali, arahkan ke halaman login
+        if (!Auth::check()) {
+            return redirect()->route('login');
+        }
+
+        if (Auth::user()->role !== $role) {
+            if (Auth::user()->role === 'admin') {
+                return redirect()->route('admin.dashboard');
+            }
+            return redirect()->route('incidents.dashboard');
         }
 
         return $next($request);
