@@ -63,15 +63,20 @@
                     <span class="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
                 </button>
 
-                <div class="flex items-center gap-3 border-l border-gray-200 pl-6">
-                    <div class="w-8 h-8 rounded-full bg-emerald-800 text-white flex items-center justify-center font-bold text-xs">
-                        {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
-                    </div>
+                <a href="{{ route('profile.edit') }}" class="flex items-center gap-3 border-l border-gray-200 pl-6 group cursor-pointer select-none">
+                    @if(isset(auth()->user()->avatar) && auth()->user()->avatar != null)
+                        <img src="{{ asset('storage/avatars/' . auth()->user()->avatar) }}" class="w-8 h-8 rounded-full object-cover shadow-sm ring-2 ring-emerald-500/20 group-hover:scale-105 transition-all">
+                    @else
+                        <div class="w-8 h-8 rounded-full bg-emerald-800 text-white flex items-center justify-center font-bold text-xs group-hover:bg-emerald-700 transition-all shadow-sm">
+                            {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
+                        </div>
+                    @endif
+                    
                     <div class="leading-tight hidden sm:block text-left">
-                        <div class="text-sm font-semibold text-gray-800">{{ auth()->user()->name }}</div>
+                        <div class="text-sm font-semibold text-gray-800 group-hover:text-emerald-600 transition-all">{{ auth()->user()->name }}</div>
                         <div class="text-[10px] text-gray-400 uppercase font-bold">{{ auth()->user()->role }}</div>
                     </div>
-                </div>
+                </a>
 
                 <form action="{{ route('logout') }}" method="POST" class="inline m-0">
                     @csrf

@@ -168,7 +168,6 @@
 
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        // AUTOMATION TIMEOUT TOAST CLOSER
         const successNotif = document.getElementById('flashSuccess');
         const errorNotif = document.getElementById('flashError');
         

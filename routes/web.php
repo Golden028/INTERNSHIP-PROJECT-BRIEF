@@ -46,6 +46,13 @@ Route::middleware('auth')->group(function () {
         })->name('incidents.dashboard');
     });
 
+    // DATA PROFILE USER
+    Route::middleware('auth')->group(function () {
+    Route::get('/profile/edit', [UserController::class, 'editProfile'])->name('profile.edit');
+    Route::put('/profile/update', [UserController::class, 'updateProfile'])->name('profile.update');
+    Route::post('/profile/upload-photo', [UserController::class, 'uploadPhoto'])->name('profile.upload_photo');
+    });
+
     // KELOMPOK HAK AKSES ADMINISTRATOR
     Route::middleware('role:admin')->prefix('admin')->group(function () {
         // Dashboard Beranda Admin

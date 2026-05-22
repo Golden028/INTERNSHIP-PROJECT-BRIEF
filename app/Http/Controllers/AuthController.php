@@ -23,15 +23,16 @@ class AuthController extends Controller
 
         $user = DB::table('users')->where('email', $credentials['email'])->first();
 
-        if ($user && Hash::check($credentials['password'], $user->password)) {
-            Auth::loginUsingId($user->id);
+        if (Auth::attempt($credentials)) {
             $request->session()->regenerate();
 
-            // REDIRECT LANGSUNG KE BERANDA KOSONG RE-DESAIN BARU
+            $user = Auth::user(); // Ambil data user yang berhasil login
+
+            // REDIRECT BERDASARKAN HAK AKSES ROLE
             if ($user->role === 'admin') {
-                return redirect()->route('admin.dashboard'); // Menuju ke /admin/dashboard
+                return redirect()->route('admin.dashboard');
             }
-            return redirect()->route('incidents.dashboard'); // Menuju ke /user/dashboard
+            return redirect()->route('incidents.dashboard');
         }
 
         return back()->withErrors(['email' => 'Email atau password salah!'])->onlyInput('email');
