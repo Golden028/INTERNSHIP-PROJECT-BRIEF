@@ -82,7 +82,21 @@
             </div>
         </div>
 
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+        <div class="flex flex-row justify-between items-center bg-gray-50 px-4 py-2 border border-gray-200 rounded-xl text-xs font-medium text-gray-600">
+            <div class="flex items-center gap-2">
+                <span>Tampilkan</span>
+                <select id="perPageSelect" onchange="changePerPage()" class="p-1.5 border border-gray-300 rounded-md bg-white focus:outline-emerald-600 font-semibold cursor-pointer">
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+                <span>data</span>
+            </div>
+            <div id="topPagination" class="flex items-center gap-1"></div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <table class="w-full text-left border-collapse" id="incidentTable">
                 <thead>
                     <tr class="bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -192,14 +206,19 @@
                 </tbody>
             </table>
         </div>
+
+        <div class="flex flex-col sm:flex-row justify-between items-center gap-4 bg-white p-4 rounded-xl border border-gray-200 text-xs font-medium text-gray-500 shadow-sm">
+            <div id="paginationInfo">Menampilkan 0 sampai 0 dari 0 log operasional</div>
+            <div id="bottomPagination" class="flex items-center gap-1"></div>
+        </div>
     </div>
 
     <div id="formReportingView" class="hidden space-y-6 max-w-2xl">
-        <div class="flex items-center gap-4">
-            <button type="button" onclick="switchToDashboardMode()" class="flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-gray-900 bg-white border border-gray-300 px-3 py-2 rounded-lg shadow-sm hover:bg-gray-50 transition">
+        <div class="flex flex-row items-center gap-4 h-[40px]">
+            <button type="button" onclick="switchToDashboardMode()" class="flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-gray-900 bg-white border border-gray-300 px-3 py-2 rounded-lg shadow-sm hover:bg-gray-50 transition flex-shrink-0">
                 <i class="fa-solid fa-arrow-left"></i> Back
             </button>
-            <h3 class="text-base font-bold text-gray-800 uppercase tracking-wider">Formulir Catat Insiden Baru</h3>
+            <h3 class="text-sm font-bold text-gray-800 uppercase tracking-wider truncate">Formulir Catat Insiden Baru</h3>
         </div>
 
         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
@@ -241,11 +260,11 @@
     </div>
 
     <div id="formEditView" class="hidden space-y-6 max-w-2xl">
-        <div class="flex items-center gap-4">
-            <button type="button" onclick="closeEditMode()" class="flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-gray-900 bg-white border border-gray-300 px-3 py-2 rounded-lg shadow-sm hover:bg-gray-50 transition">
+        <div class="flex flex-row items-center gap-4 h-[40px]">
+            <button type="button" onclick="closeEditMode()" class="flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-gray-900 bg-white border border-gray-300 px-3 py-2 rounded-lg shadow-sm hover:bg-gray-50 transition flex-shrink-0">
                 <i class="fa-solid fa-arrow-left"></i> Batal
             </button>
-            <h3 class="text-base font-bold text-gray-800 uppercase tracking-wider">Formulir Edit Log Insiden</h3>
+            <h3 class="text-sm font-bold text-gray-800 uppercase tracking-wider truncate">Formulir Edit Log Insiden</h3>
         </div>
 
         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
@@ -289,6 +308,131 @@
 </div>
 
 <script>
+    // ENGINE UTAMA CLIENT-SIDE PAGINATION & FILTER
+    let currentPage = 1;
+    let rowsPerPage = 10;
+    let filteredRows = [];
+
+    document.addEventListener("DOMContentLoaded", function() {
+        // Jalankan inisialisasi pagination pertama kali halaman di-load
+        initPagination();
+
+        const notification = document.getElementById('flashNotification');
+        if (notification) {
+            setTimeout(() => {
+                notification.classList.replace('opacity-100', 'opacity-0');
+                notification.classList.replace('translate-y-0', '-translate-y-4');
+                setTimeout(() => notification.remove(), 500);
+            }, 3000);
+        }
+    });
+
+    function initPagination() {
+        // Ambil baris data yang sedang tidak tersembunyi oleh filter utama
+        const allRows = Array.from(document.querySelectorAll('.incident-row'));
+        filteredRows = allRows.filter(row => !row.classList.contains('hidden-by-filter'));
+        
+        currentPage = 1; 
+        renderTablePage();
+    }
+
+    function renderTablePage() {
+        const totalRows = filteredRows.length;
+        const totalPages = Math.ceil(totalRows / rowsPerPage) || 1;
+
+        if (currentPage > totalPages) currentPage = totalPages;
+        if (currentPage < 1) currentPage = 1;
+
+        const startIdx = (currentPage - 1) * rowsPerPage;
+        const endIdx = startIdx + rowsPerPage;
+
+        // Tampilkan/Sembunyikan baris data berdasarkan halaman aktif
+        document.querySelectorAll('.incident-row').forEach(row => {
+            row.classList.add('hidden'); // Sembunyikan semua dulu
+        });
+
+        filteredRows.slice(startIdx, endIdx).forEach(row => {
+            row.classList.remove('hidden'); // Munculkan data di page ini
+        });
+
+        // Perbarui Info summary di bagian bawah
+        const infoStart = totalRows === 0 ? 0 : startIdx + 1;
+        const infoEnd = endIdx > totalRows ? totalRows : endIdx;
+        document.getElementById('paginationInfo').innerText = `Menampilkan ${infoStart} sampai ${infoEnd} dari ${totalRows} log operasional`;
+
+        // Render tombol kontrol page di bagian atas dan bawah
+        renderPaginationButtons('topPagination', totalPages);
+        renderPaginationButtons('bottomPagination', totalPages);
+
+        // Atur penampakan teks "Tidak ada data" jika hasil filter kosong
+        const noDataRow = document.getElementById('noDataRow');
+        if (totalRows === 0) {
+            if (noDataRow) noDataRow.classList.remove('hidden');
+        } else {
+            if (noDataRow) noDataRow.classList.add('hidden');
+        }
+    }
+
+    function renderPaginationButtons(containerId, totalPages) {
+        const container = document.getElementById(containerId);
+        container.innerHTML = '';
+
+        if (totalPages <= 1) return; // Tidak perlu tombol jika hanya 1 halaman
+
+        // Tombol Prev
+        const prevBtn = document.createElement('button');
+        prevBtn.innerHTML = '<i class="fa-solid fa-angle-left"></i>';
+        prevBtn.className = `px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition ${currentPage === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200' : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300'}`;
+        if (currentPage !== 1) prevBtn.onclick = () => { currentPage--; renderTablePage(); };
+        container.appendChild(prevBtn);
+
+        // Angka Halaman
+        for (let i = 1; i <= totalPages; i++) {
+            const pageBtn = document.createElement('button');
+            pageBtn.innerText = i;
+            pageBtn.className = `px-3 py-1.5 rounded-lg border text-xs font-bold transition ${currentPage === i ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm' : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300'}`;
+            pageBtn.onclick = () => { currentPage = i; renderTablePage(); };
+            container.appendChild(pageBtn);
+        }
+
+        // Tombol Next
+        const nextBtn = document.createElement('button');
+        nextBtn.innerHTML = '<i class="fa-solid fa-angle-right"></i>';
+        nextBtn.className = `px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition ${currentPage === totalPages ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200' : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300'}`;
+        if (currentPage !== totalPages) nextBtn.onclick = () => { currentPage++; renderTablePage(); };
+        container.appendChild(nextBtn);
+    }
+
+    function changePerPage() {
+        rowsPerPage = parseInt(document.getElementById('perPageSelect').value);
+        currentPage = 1;
+        renderTablePage();
+    }
+
+    // UPDATE MESIN FILTERING (DIINTERGRASIKAN DENGAN ENGINE PAGINATION)
+    function filterIncidentTable() {
+        const selectedRoom = document.getElementById('filterRuang').value;
+        const selectedSeverity = document.getElementById('filterSeverity').value;
+        const selectedStatus = document.getElementById('filterStatus').value;
+        const rows = document.querySelectorAll('.incident-row');
+
+        rows.forEach(row => {
+            const matchRoom = (selectedRoom === 'ALL' || row.getAttribute('data-room') === selectedRoom);
+            const matchSeverity = (selectedSeverity === 'ALL' || row.getAttribute('data-severity') === selectedSeverity);
+            const matchStatus = (selectedStatus === 'ALL' || row.getAttribute('data-status') === selectedStatus);
+
+            if (matchRoom && matchSeverity && matchStatus) {
+                row.classList.remove('hidden-by-filter');
+            } else {
+                row.classList.add('hidden-by-filter');
+            }
+        });
+
+        // Hitung ulang baris data yang lolos filter, lalu reset ke page 1
+        initPagination();
+    }
+
+    // MODAL & NAVIGASI ACTIONS
     let currentDeleteFormId = null;
 
     function triggerDeleteModal(event, formId) {
@@ -319,17 +463,6 @@
         }
     });
 
-    document.addEventListener("DOMContentLoaded", function() {
-        const notification = document.getElementById('flashNotification');
-        if (notification) {
-            setTimeout(() => {
-                notification.classList.replace('opacity-100', 'opacity-0');
-                notification.classList.replace('translate-y-0', '-translate-y-4');
-                setTimeout(() => notification.remove(), 500);
-            }, 3000);
-        }
-    });
-
     function switchToFormMode() {
         document.getElementById('mainDashboardView').classList.add('hidden');
         document.getElementById('formEditView').classList.add('hidden');
@@ -347,8 +480,11 @@
         document.getElementById('edit_title').value = incident.title;
         document.getElementById('edit_description').value = incident.description || '';
         document.getElementById('edit_severity_level').value = incident.severity_level;
+        
         document.getElementById('editForm').action = `/incidents/${incident.id}`;
+        
         document.getElementById('mainDashboardView').classList.add('hidden');
+        document.getElementById('formReportingView').classList.add('hidden');
         document.getElementById('formEditView').classList.remove('hidden');
     }
 
@@ -374,42 +510,5 @@
             closeDeleteModal();
         }
     });
-
-    function filterIncidentTable() {
-        const selectedRoom = document.getElementById('filterRuang').value;
-        const selectedSeverity = document.getElementById('filterSeverity').value;
-        const selectedStatus = document.getElementById('filterStatus').value;
-        const rows = document.querySelectorAll('.incident-row');
-        let visibleCount = 0;
-
-        rows.forEach(row => {
-            const matchRoom = (selectedRoom === 'ALL' || row.getAttribute('data-room') === selectedRoom);
-            const matchSeverity = (selectedSeverity === 'ALL' || row.getAttribute('data-severity') === selectedSeverity);
-            const matchStatus = (selectedStatus === 'ALL' || row.getAttribute('data-status') === selectedStatus);
-
-            if (matchRoom && matchSeverity && matchStatus) {
-                row.classList.remove('hidden');
-                visibleCount++;
-            } else {
-                row.classList.add('hidden');
-            }
-        });
-
-        const noDataRow = document.getElementById('noDataRow');
-        if (visibleCount === 0) {
-            if (!noDataRow) {
-                const tbody = document.querySelector('#incidentTable tbody');
-                const colSpanCount = {{ auth()->user()->role === 'admin' ? 8 : 7 }};
-                const newRow = document.createElement('tr');
-                newRow.id = 'noDataRow';
-                newRow.innerHTML = `<td colspan="${colSpanCount}" class="p-6 text-center text-gray-400 bg-gray-50/50 font-medium">Tidak ada log insiden operasional yang cocok dengan kriteria filter.</td>`;
-                tbody.appendChild(newRow);
-            } else {
-                noDataRow.classList.remove('hidden');
-            }
-        } else if (noDataRow) {
-            noDataRow.classList.add('hidden');
-        }
-    }
 </script>
 @endsection

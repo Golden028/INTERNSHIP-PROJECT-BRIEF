@@ -28,10 +28,16 @@ Route::middleware('auth')->group(function () {
     
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-    // Menu Utama Log Insiden Bersama (Dapat diakses Admin maupun User)
+    // =========================================================================
+    // Menu Utama Log Insiden Bersama (Dapat diakses BERSAMA oleh Admin maupun User)
+    // =========================================================================
     Route::get('/incidents', [IncidentController::class, 'index'])->name('incidents.index');
     Route::post('/incidents', [IncidentController::class, 'store'])->name('incidents.store');
     Route::get('/incidents/export', [IncidentController::class, 'export'])->name('incidents.export');
+    Route::put('/incidents/{id}', [IncidentController::class, 'update'])->name('incidents.update');
+    
+    // PERBAIKAN UTAMA: Rute delete dipindah ke rute bersama agar User biasa bisa menghapus datanya sendiri
+    Route::delete('/incidents/{id}', [IncidentController::class, 'destroy'])->name('incidents.destroy');
 
     // KELOMPOK HAK AKSES USER LAPANGAN
     Route::middleware('role:user')->prefix('user')->group(function () {
@@ -46,12 +52,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/dashboard', function () {
             return view('admin.dashboard');
         })->name('admin.dashboard');
-        
-        // Kontrol Aksi Manajemen Log Insiden
-        Route::put('/incidents/{id}', [IncidentController::class, 'update'])->name('incidents.update');
-        Route::delete('/incidents/{id}', [IncidentController::class, 'destroy'])->name('incidents.destroy');
 
-        // TAMBAHAN BARU: Kontrol CRUD Manajemen Kelola Pengguna (Admin Only)
+        // Kontrol CRUD Manajemen Kelola Pengguna (Admin Only)
         Route::get('/users', [UserController::class, 'index'])->name('admin.users.index');
         Route::post('/users', [UserController::class, 'store'])->name('admin.users.store');
         Route::put('/users/{id}', [UserController::class, 'update'])->name('admin.users.update');

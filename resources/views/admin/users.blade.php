@@ -65,6 +65,20 @@
             </select>
         </div>
 
+        <div class="flex flex-row justify-between items-center bg-gray-50 px-4 py-2 border border-gray-200 rounded-xl text-xs font-medium text-gray-600">
+            <div class="flex items-center gap-2">
+                <span>Tampilkan</span>
+                <select id="perPageSelect" onchange="changePerPage()" class="p-1.5 border border-gray-300 rounded-md bg-white focus:outline-emerald-600 font-semibold cursor-pointer">
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+                <span>data</span>
+            </div>
+            <div id="topPagination" class="flex items-center gap-1"></div>
+        </div>
+
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <table class="w-full text-left border-collapse" id="userManagementTable">
                 <thead>
@@ -106,17 +120,25 @@
                             </td>
                         </tr>
                     @endforeach
+                    <tr id="noDataRow" class="hidden">
+                        <td colspan="5" class="p-8 text-center text-gray-400 bg-gray-50/50 font-medium">Tidak ada data pengguna yang cocok dengan kriteria filter.</td>
+                    </tr>
                 </tbody>
             </table>
+        </div>
+
+        <div class="flex flex-col sm:flex-row justify-between items-center gap-4 bg-white p-4 rounded-xl border border-gray-200 text-xs font-medium text-gray-500 shadow-sm">
+            <div id="paginationInfo">Menampilkan 0 sampai 0 dari 0 data pengguna</div>
+            <div id="bottomPagination" class="flex items-center gap-1"></div>
         </div>
     </div>
 
     <div id="userFormReportingView" class="hidden space-y-6 max-w-xl">
-        <div class="flex items-center gap-4">
-            <button type="button" onclick="closeFormMode()" class="flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-gray-900 bg-white border border-gray-300 px-3 py-2 rounded-lg shadow-sm hover:bg-gray-50 transition">
+        <div class="flex flex-row items-center gap-4 h-[40px]">
+            <button type="button" onclick="closeFormMode()" class="flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-gray-900 bg-white border border-gray-300 px-3 py-2 rounded-lg shadow-sm hover:bg-gray-50 transition flex-shrink-0">
                 <i class="fa-solid fa-arrow-left"></i> Back
             </button>
-            <h3 id="formPanelTitle" class="text-base font-bold text-gray-800 uppercase tracking-wider">Formulir Tambah Pengguna</h3>
+            <h3 id="formPanelTitle" class="text-sm font-bold text-gray-800 uppercase tracking-wider truncate">Formulir Tambah Pengguna</h3>
         </div>
 
         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
@@ -157,47 +179,16 @@
 </div>
 
 <script>
-    // Variabel global untuk merekam ID Form Target yang akan dieksekusi hapus
-    let currentDeleteFormId = null;
+    // ENGINE JAVASCRIPT: PAGINATION & SIZING ENTRIES CONTROL
+    let currentPage = 1;
+    let rowsPerPage = 10;
+    let filteredRows = [];
 
-    // FUNGSI MEMBUKA CUSTOM MODAL DELETE
-    function triggerDeleteModal(event, formId) {
-        event.preventDefault();
-        event.stopPropagation();
-        
-        currentDeleteFormId = formId; // Simpan ID form target
-        
-        const modal = document.getElementById('customDeleteModal');
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-        
-        // Animasi pop-up membesar lembut (Scale Effect)
-        setTimeout(() => {
-            modal.querySelector('.transform').classList.replace('scale-95', 'scale-100');
-        }, 10);
-    }
-
-    // FUNGSI MENUTUP CUSTOM MODAL DELETE
-    function closeDeleteModal() {
-        const modal = document.getElementById('customDeleteModal');
-        modal.querySelector('.transform').classList.replace('scale-100', 'scale-95');
-        
-        setTimeout(() => {
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-            currentDeleteFormId = null;
-        }, 150);
-    }
-
-    // Hubungkan aksi klik tombol konfirmasi di modal ke submit form asli Laravel
-    document.getElementById('confirmDeleteButton').addEventListener('click', function() {
-        if (currentDeleteFormId) {
-            document.getElementById(currentDeleteFormId).submit();
-        }
-    });
-
-    // AUTOMATION TIMEOUT UNTUK TOAST NOTIFICATION (SUCCESS & ERROR)
     document.addEventListener("DOMContentLoaded", function() {
+        // Jalankan kalkulasi pembagian halaman pertama kali data dimuat
+        initUserPagination();
+
+        // Otomasi penghapusan Toast Notification
         const successNotif = document.getElementById('flashSuccess');
         const errorNotif = document.getElementById('flashError');
         
@@ -218,6 +209,141 @@
         }
     });
 
+    function initUserPagination() {
+        const allRows = Array.from(document.querySelectorAll('.user-data-row'));
+        // Ambil elemen baris yang tidak diblokir/disembunyikan oleh sistem filter
+        filteredRows = allRows.filter(row => !row.classList.contains('hidden-by-filter'));
+        
+        currentPage = 1; 
+        renderUserTablePage();
+    }
+
+    function renderUserTablePage() {
+        const totalRows = filteredRows.length;
+        const totalPages = Math.ceil(totalRows / rowsPerPage) || 1;
+
+        if (currentPage > totalPages) currentPage = totalPages;
+        if (currentPage < 1) currentPage = 1;
+
+        const startIdx = (currentPage - 1) * rowsPerPage;
+        const endIdx = startIdx + rowsPerPage;
+
+        // Sembunyikan seluruh baris data default terlebih dahulu
+        document.querySelectorAll('.user-data-row').forEach(row => {
+            row.classList.add('hidden');
+        });
+
+        // Hanya tampilkan data yang masuk ke range halaman aktif saat ini
+        filteredRows.slice(startIdx, endIdx).forEach(row => {
+            row.classList.remove('hidden');
+        });
+
+        // Perbarui teks informasi rangkuman entries data di sisi kiri bawah
+        const infoStart = totalRows === 0 ? 0 : startIdx + 1;
+        const infoEnd = endIdx > totalRows ? totalRows : endIdx;
+        document.getElementById('paginationInfo').innerText = `Menampilkan ${infoStart} sampai ${infoEnd} dari ${totalRows} data pengguna`;
+
+        // Gambar ulang tombol kontrol angka halaman
+        renderPaginationControls('topPagination', totalPages);
+        renderPaginationControls('bottomPagination', totalPages);
+
+        // Atur penampakan notifikasi kosong bila data nihil
+        const noDataRow = document.getElementById('noDataRow');
+        if (totalRows === 0) {
+            if (noDataRow) noDataRow.classList.remove('hidden');
+        } else {
+            if (noDataRow) noDataRow.classList.add('hidden');
+        }
+    }
+
+    function renderPaginationControls(containerId, totalPages) {
+        const container = document.getElementById(containerId);
+        container.innerHTML = '';
+
+        if (totalPages <= 1) return; // Tidak memerlukan pagination bila data muat dalam 1 halaman
+
+        // Tombol Halaman Sebelumnya (Prev)
+        const prevBtn = document.createElement('button');
+        prevBtn.innerHTML = '<i class="fa-solid fa-angle-left"></i>';
+        prevBtn.className = `px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition ${currentPage === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200' : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300'}`;
+        if (currentPage !== 1) prevBtn.onclick = () => { currentPage--; renderUserTablePage(); };
+        container.appendChild(prevBtn);
+
+        // Angka-angka halaman indikator
+        for (let i = 1; i <= totalPages; i++) {
+            const pageBtn = document.createElement('button');
+            pageBtn.innerText = i;
+            pageBtn.className = `px-3 py-1.5 rounded-lg border text-xs font-bold transition ${currentPage === i ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm' : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300'}`;
+            pageBtn.onclick = () => { currentPage = i; renderUserTablePage(); };
+            container.appendChild(pageBtn);
+        }
+
+        // Tombol Halaman Berikutnya (Next)
+        const nextBtn = document.createElement('button');
+        nextBtn.innerHTML = '<i class="fa-solid fa-angle-right"></i>';
+        nextBtn.className = `px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition ${currentPage === totalPages ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200' : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300'}`;
+        if (currentPage !== totalPages) nextBtn.onclick = () => { currentPage++; renderUserTablePage(); };
+        container.appendChild(nextBtn);
+    }
+
+    function changePerPage() {
+        rowsPerPage = parseInt(document.getElementById('perPageSelect').value);
+        currentPage = 1;
+        renderUserTablePage();
+    }
+
+    // UTALITAS INTEGRASI MESIN FILTER UTAMA DAN ENGINE PAGINATION
+    function filterUserTable() {
+        const selectedRole = document.getElementById('filterRole').value;
+        const rows = document.querySelectorAll('.user-data-row');
+
+        rows.forEach(row => {
+            if (selectedRole === 'ALL' || row.getAttribute('data-role') === selectedRole) {
+                row.classList.remove('hidden-by-filter');
+            } else {
+                row.classList.add('hidden-by-filter');
+            }
+        });
+
+        // Hitung ulang subset data yang lolos pencarian peran akun
+        initUserPagination();
+    }
+
+    // MODAL BOX CONFIRMATION ACTION CONTROL
+    let currentDeleteFormId = null;
+
+    function triggerDeleteModal(event, formId) {
+        event.preventDefault();
+        event.stopPropagation();
+        
+        currentDeleteFormId = formId;
+        const modal = document.getElementById('customDeleteModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        
+        setTimeout(() => {
+            modal.querySelector('.transform').classList.replace('scale-95', 'scale-100');
+        }, 10);
+    }
+
+    function closeDeleteModal() {
+        const modal = document.getElementById('customDeleteModal');
+        modal.querySelector('.transform').classList.replace('scale-100', 'scale-95');
+        
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            currentDeleteFormId = null;
+        }, 150);
+    }
+
+    document.getElementById('confirmDeleteButton').addEventListener('click', function() {
+        if (currentDeleteFormId) {
+            document.getElementById(currentDeleteFormId).submit();
+        }
+    });
+
+    // FORM VISIBILITY ACTIONS MODE
     function openCreateMode() {
         document.getElementById('mainUserDashboardView').classList.add('hidden');
         document.getElementById('userFormReportingView').classList.remove('hidden');
@@ -258,24 +384,10 @@
     }
 
     window.addEventListener('click', function(event) {
-        // Menutup modal jika area backdrop blur di luar kotak putih diklik
         const modal = document.getElementById('customDeleteModal');
         if (event.target === modal) {
             closeDeleteModal();
         }
     });
-
-    function filterUserTable() {
-        const selectedRole = document.getElementById('filterRole').value;
-        const rows = document.querySelectorAll('.user-data-row');
-
-        rows.forEach(row => {
-            if (selectedRole === 'ALL' || row.getAttribute('data-role') === selectedRole) {
-                row.classList.remove('hidden');
-            } else {
-                row.classList.add('hidden');
-            }
-        });
-    }
 </script>
 @endsection

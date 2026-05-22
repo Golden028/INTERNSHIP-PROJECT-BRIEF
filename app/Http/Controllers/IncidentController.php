@@ -63,8 +63,8 @@ class IncidentController extends Controller
             'status'            => 'Open', 
             'reported_by_name'  => Auth::user()->name, 
             'performed_by'      => Auth::id(), 
-            'created_at'        => \Carbon\Carbon::now(),
-            'updated_at'        => \Carbon\Carbon::now(),
+            'created_at'        => Carbon::now(), // Diseragamkan menggunakan alias import
+            'updated_at'        => Carbon::now(),
         ]);
 
         // Rekam ke Audit Trail
@@ -80,7 +80,7 @@ class IncidentController extends Controller
         return redirect()->route('incidents.index')->with('success', 'Log kendala operasional berhasil dicatatkan!');
     }
 
-    // Proses Memperbarui Data
+    // Proses Memperbarui Data (Kembali ke /incidents dan merubah data)
     public function update(Request $request, $id)
     {
         $oldData = DB::table('incident_logs')->where('id', $id)->whereNull('deleted_at')->first();
@@ -175,20 +175,18 @@ class IncidentController extends Controller
     }
 
     // ==========================================
-    // TAMBAHAN BARU: METHOD UNTUK DOWNLOAD EXCEL (CSV)
+    // DOWNLOAD EXCEL (DENGAN FORMAT RAMAH EXCEL & NO ######)
     // ==========================================
     public function export()
     {
-        // 1. Ambil data sesuai dengan role yang sedang aktif
         if (Auth::user()->role === 'admin') {
             $data = DB::table('incident_logs')->whereNull('deleted_at')->orderBy('created_at', 'desc')->get();
-            $filename = 'Log Insiden ' . date('Ymd His') . '.csv';
+            $filename = 'Semua_Log_Insiden_' . date('Ymd_His') . '.csv';
         } else {
             $data = DB::table('incident_logs')->whereNull('deleted_at')->where('performed_by', Auth::id())->orderBy('created_at', 'desc')->get();
-            $filename = 'Log Insiden Saya ' . date('Ymd His') . '.csv';
+            $filename = 'Log_Insiden_Saya_' . date('Ymd_His') . '.csv';
         }
 
-        // 2. Tentukan Header Kolom Excel
         $headers = [
             'Content-Type' => 'text/csv',
             'Content-Disposition' => 'attachment; filename="' . $filename . '"',
@@ -197,17 +195,14 @@ class IncidentController extends Controller
             'Expires' => '0'
         ];
 
-        // 3. Callback Stream data untuk menghemat kapasitas RAM web server
         $callback = function() use ($data) {
             $file = fopen('php://output', 'w');
             
-            // Tambahkan BOM (Byte Order Mark) agar Excel mendeteksi encoding UTF-8 dengan benar (menghindari text berantakan)
+            // Masukkan UTF-8 BOM Injection
             fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
 
-            // Judul kolom lembar kerja
             fputcsv($file, ['ID Log', 'ID Ruang', 'Judul Masalah / Kendala', 'Deskripsi Kronologi', 'Tingkat Keparahan', 'Status Kerja', 'Nama Pelapor', 'Waktu Kejadian']);
 
-            // Isikan baris data mentah dari database
             foreach ($data as $row) {
                 fputcsv($file, [
                     $row->id,
@@ -217,14 +212,13 @@ class IncidentController extends Controller
                     $row->severity_level,
                     $row->status,
                     $row->reported_by_name,
-                    $row->created_at
+                    $row->created_at ? date('d-m-Y H:i', strtotime($row->created_at)) : '-'
                 ]);
             }
             
             fclose($file);
         };
 
-        // Return data dalam bentuk file unduhan instan
         return response()->stream($callback, 200, $headers);
     }
 }
