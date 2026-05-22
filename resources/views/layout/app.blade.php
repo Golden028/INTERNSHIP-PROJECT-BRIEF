@@ -65,7 +65,7 @@
 
                 <a href="{{ route('profile.edit') }}" class="flex items-center gap-3 border-l border-gray-200 pl-6 group cursor-pointer select-none">
                     @if(isset(auth()->user()->avatar) && auth()->user()->avatar != null)
-                        <img src="{{ asset('storage/avatars/' . auth()->user()->avatar) }}" class="w-8 h-8 rounded-full object-cover shadow-sm ring-2 ring-emerald-500/20 group-hover:scale-105 transition-all">
+                        <img src="{{ asset('avatars/' . auth()->user()->avatar) }}" class="w-8 h-8 rounded-full object-cover shadow-sm ring-2 ring-emerald-500/20 group-hover:scale-105 transition-all">
                     @else
                         <div class="w-8 h-8 rounded-full bg-emerald-800 text-white flex items-center justify-center font-bold text-xs group-hover:bg-emerald-700 transition-all shadow-sm">
                             {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}

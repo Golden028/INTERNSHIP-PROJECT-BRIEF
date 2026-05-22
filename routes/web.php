@@ -51,6 +51,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile/edit', [UserController::class, 'editProfile'])->name('profile.edit');
     Route::put('/profile/update', [UserController::class, 'updateProfile'])->name('profile.update');
     Route::post('/profile/upload-photo', [UserController::class, 'uploadPhoto'])->name('profile.upload_photo');
+    Route::delete('/profile/delete-photo', [UserController::class, 'deletePhoto'])->name('profile.delete_photo');
     });
 
     // KELOMPOK HAK AKSES ADMINISTRATOR

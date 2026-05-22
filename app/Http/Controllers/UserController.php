@@ -10,10 +10,13 @@ use Carbon\Carbon;
 
 class UserController extends Controller
 {
+    // Tentukan ID Head Admin yang tidak boleh diubah/dihapus oleh admin lain
+    private const HEAD_ADMIN_ID = 1; 
+
     // READ: Menampilkan daftar semua pengguna
     public function index()
     {
-        $users = DB::select("SELECT id, name, email, role, created_at FROM users ORDER BY created_at DESC");
+        $users = DB::select("SELECT id, name, email, role, created_at FROM users ORDER BY created_at ASC");
         return view('admin.users', compact('users'));
     }
 
@@ -27,13 +30,11 @@ class UserController extends Controller
             'role'     => 'required|in:admin,user',
         ]);
 
-        // Cek duplikasi email
         $exists = DB::table('users')->where('email', $validated['email'])->exists();
         if ($exists) {
             return redirect()->back()->with('error', 'Email ini sudah terdaftar di sistem!');
         }
 
-        // Simpan menggunakan Query Builder murni
         $userId = DB::table('users')->insertGetId([
             'name'       => $validated['name'],
             'email'      => $validated['email'],
@@ -43,10 +44,9 @@ class UserController extends Controller
             'updated_at' => Carbon::now(),
         ]);
 
-        // Catat ke Audit Trail (Gunakan format pendek konsisten)
         DB::table('audit_trails')->insert([
             'table_name'   => 'users',
-            'action'       => 'INSERT', // Disingkat agar muat di VARCHAR(10/15)
+            'action'       => 'INSERT', 
             'record_id'    => $userId,
             'new_values'   => json_encode(['name' => $validated['name'], 'email' => $validated['email'], 'role' => $validated['role']]),
             'performed_by' => Auth::id(),
@@ -56,10 +56,14 @@ class UserController extends Controller
         return redirect()->route('admin.users.index')->with('success', 'Pengguna baru berhasil ditambahkan!');
     }
 
-    // UPDATE: Memperbarui data pengguna (Nama, Email, Peran, & Kata Sandi Opsional)
+    // UPDATE: Memperbarui data pengguna
     public function update(Request $request, $id)
     {
-        // 1. Validasi input - password kita buat 'nullable' agar opsional
+        // Proteksi: Admin lain tidak bisa mengubah akun Head Admin
+        if ($id == self::HEAD_ADMIN_ID && Auth::id() != self::HEAD_ADMIN_ID) {
+            return redirect()->back()->with('error', 'Akses ditolak! Anda tidak diizinkan mengubah akun Head Admin.');
+        }
+
         $validated = $request->validate([
             'name'     => 'required|string|max:100',
             'email'    => 'required|email|max:150',
@@ -72,7 +76,6 @@ class UserController extends Controller
             return redirect()->back()->with('error', 'Data pengguna tidak ditemukan.');
         }
 
-        // Cek duplikasi email (melompati pemeriksaan email milik pengguna itu sendiri)
         $emailExists = DB::table('users')
             ->where('email', $validated['email'])
             ->where('id', '!=', $id)
@@ -82,7 +85,6 @@ class UserController extends Controller
             return redirect()->back()->with('error', 'Alamat email ini sudah digunakan oleh akun lain!');
         }
 
-        // 2. Susun data dasar pembaruan (Nama, Email, dan Peran)
         $updateData = [
             'name'       => $validated['name'],
             'email'      => $validated['email'],
@@ -90,25 +92,18 @@ class UserController extends Controller
             'updated_at' => Carbon::now(),
         ];
 
-        $newValuesForAudit = [
-            'name'  => $validated['name'],
-            'email' => $validated['email'],
-            'role'  => $validated['role']
-        ];
+        $newValuesForAudit = ['name' => $validated['name'], 'email' => $validated['email'], 'role' => $validated['role']];
 
-        // 3. KUNCI PERBAIKAN: Jika field password diisi, enkripsi dan masukkan ke array update
         if ($request->filled('password')) {
             $updateData['password'] = Hash::make($validated['password']);
             $newValuesForAudit['password_changed'] = true;
         }
 
-        // 4. Eksekusi pembaruan rekaman ke database
         DB::table('users')->where('id', $id)->update($updateData);
 
-        // Catat aktivitas ke Audit Trail
         DB::table('audit_trails')->insert([
             'table_name'   => 'users',
-            'action'       => 'UPDATE', // Disingkat mengikuti standar skema log insiden
+            'action'       => 'UPDATE', 
             'record_id'    => $id,
             'old_values'   => json_encode(['name' => $oldUser->name, 'email' => $oldUser->email, 'role' => $oldUser->role]),
             'new_values'   => json_encode($newValuesForAudit),
@@ -116,15 +111,20 @@ class UserController extends Controller
             'created_at'   => Carbon::now(),
         ]);
 
-        return redirect()->route('admin.users.index')->with('success', 'Data kredensial dan profil pengguna berhasil diperbarui!');
+        return redirect()->route('admin.users.index')->with('success', 'Data berhasil diperbarui!');
     }
 
-    // DELETE: Menghapus pengguna secara permanen dari sistem
+    // DELETE: Menghapus pengguna
     public function destroy($id)
     {
-        // Mencegah admin menghapus dirinya sendiri secara tidak sengaja
+        // Proteksi: Tidak boleh hapus Head Admin
+        if ($id == self::HEAD_ADMIN_ID) {
+            return redirect()->back()->with('error', 'Akses ditolak! Akun Head Admin tidak dapat dihapus.');
+        }
+
+        // Proteksi: Tidak boleh hapus diri sendiri
         if (Auth::id() == $id) {
-            return redirect()->back()->with('error', 'Akses ditolak! Anda tidak bisa menghapus akun Anda sendiri yang sedang aktif.');
+            return redirect()->back()->with('error', 'Akses ditolak! Anda tidak bisa menghapus akun Anda sendiri.');
         }
 
         $oldUser = DB::table('users')->where('id', $id)->first();
@@ -132,28 +132,24 @@ class UserController extends Controller
             return redirect()->back()->with('error', 'Pengguna tidak ditemukan.');
         }
 
-        // Hapus baris data murni SQL
         DB::table('users')->where('id', $id)->delete();
 
-        // Rekam jejak audit pemusnahan user
         DB::table('audit_trails')->insert([
             'table_name'   => 'users',
-            'action'       => 'DELETE', // Disingkat agar seragam
+            'action'       => 'DELETE', 
             'record_id'    => $id,
             'old_values'   => json_encode(['name' => $oldUser->name, 'email' => $oldUser->email, 'role' => $oldUser->role]),
             'performed_by' => Auth::id(),
             'created_at'   => Carbon::now(),
         ]);
 
-        return redirect()->route('admin.users.index')->with('success', 'Akun pengguna berhasil dihapus dari sistem!');
+        return redirect()->route('admin.users.index')->with('success', 'Akun pengguna berhasil dihapus!');
     }
 
-    // ==========================================
     // METHOD UNTUK DOWNLOAD EXCEL (CSV STREAM)
-    // ==========================================
     public function export()
     {
-        $users = DB::table('users')->orderBy('created_at', 'desc')->get();
+        $users = DB::table('users')->orderBy('created_at', 'asc')->get();
         $filename = 'Daftar_Pengguna_Sistem_' . date('Ymd_His') . '.csv';
 
         $headers = [
@@ -179,7 +175,6 @@ class UserController extends Controller
                     $user->created_at ? date('d-m-Y H:i', strtotime($user->created_at)) : '-'
                 ]);
             }
-            
             fclose($file);
         };
 
@@ -206,6 +201,7 @@ class UserController extends Controller
             'password' => 'nullable|min:6|confirmed', 
         ]);
 
+        // 1. Cek duplikasi email (abaikan milik user itu sendiri)
         $emailExists = DB::table('users')
             ->where('email', $validated['email'])
             ->where('id', '!=', $user->id)
@@ -215,6 +211,17 @@ class UserController extends Controller
             return redirect()->back()->with('error', 'Alamat email tersebut sudah terdaftar pada akun lain!');
         }
 
+        // 2. LOGIKA BARU: Cek apakah data benar-benar berubah
+        $isNameChanged = ($validated['name'] !== $user->name);
+        $isEmailChanged = ($validated['email'] !== $user->email);
+        $isPasswordChanged = $request->filled('password');
+
+        // Jika tidak ada satu pun data yang berubah, kembalikan tanpa session 'success'
+        if (!$isNameChanged && !$isEmailChanged && !$isPasswordChanged) {
+            return redirect()->back(); // Tidak mengirim notifikasi
+        }
+
+        // 3. Persiapkan data update
         $updateData = [
             'name'       => $validated['name'],
             'email'      => $validated['email'],
@@ -226,15 +233,23 @@ class UserController extends Controller
             'email' => $validated['email']
         ];
 
-        if ($request->filled('password')) {
+        if ($isPasswordChanged) {
             $updateData['password'] = Hash::make($validated['password']);
             $newValuesForAudit['password_changed'] = true;
         }
 
+        // 4. Update ke Database
         DB::table('users')->where('id', $user->id)->update($updateData);
 
-        // PERBAIKAN UTAMA: Mengubah string aksi dari 'SELF_UPDATE_PROFILE' menjadi 'UPDATE' 
-        // agar langsung lolos validasi panjang kolom database (no data truncated)
+        // 5. Sinkronisasi data session Auth aktif secara real-time
+        $freshUser = DB::table('users')->where('id', $user->id)->first();
+        if (auth()->check()) {
+            auth()->user()->name = $freshUser->name;
+            auth()->user()->email = $freshUser->email;
+            auth()->user()->avatar = $freshUser->avatar;
+        }
+
+        // 6. Catat audit trail
         DB::table('audit_trails')->insert([
             'table_name'   => 'users',
             'action'       => 'UPDATE', 
@@ -245,38 +260,54 @@ class UserController extends Controller
             'created_at'   => Carbon::now(),
         ]);
 
+        // 7. Kirim notifikasi sukses hanya jika ada perubahan
         return redirect()->back()->with('success', 'Profil dan kredensial akun Anda berhasil diperbarui!');
     }
-
+    
+    // =========================================================================
+    // PERBAIKAN: MENYEMATKAN KEMBALI METHOD UPLOADPHOTO YANG TADI HILANG
+    // =========================================================================
     public function uploadPhoto(Request $request)
     {
+        // Mendukung file berukuran besar hingga 20MB (20480)
         $request->validate([
-            'profile_photo' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'profile_photo' => 'required|image|mimes:jpeg,png,jpg,gif|max:20480',
         ]);
 
         $user = Auth::user();
 
         if ($request->hasFile('profile_photo')) {
             $file = $request->file('profile_photo');
-            
-            // Membuat nama berkas unik agar tidak bentrok di server file
             $filename = 'avatar_' . $user->id . '_' . time() . '.' . $file->getClientOriginalExtension();
             
-            // Simpan fisik file ke folder storage/app/public/avatars
-            $file->storeAs('public/avatars', $filename);
+            $publicPath = public_path('avatars');
+            if (!file_exists($publicPath)) {
+                mkdir($publicPath, 0777, true);
+            }
 
-            // 1. Update nama file ke database MySQL murni
+            // KUNCI CLEANUP: Buang fisik file foto lama dari folder public/avatars agar tidak menumpuk
+            if (!empty($user->avatar)) {
+                $oldFilePath = $publicPath . '/' . $user->avatar;
+                if (file_exists($oldFilePath)) {
+                    @unlink($oldFilePath); 
+                }
+            }
+
+            // Pindahkan file gambar baru langsung ke root publik
+            $file->move($publicPath, $filename);
+
+            // Update nama berkas file baru ke database MySQL
             DB::table('users')->where('id', $user->id)->update([
                 'avatar'     => $filename,
                 'updated_at' => Carbon::now()
             ]);
 
-            // 2. KUNCI PERBAIKAN UTAMA: Paksa Auth Laravel untuk memperbarui data session yang aktif saat ini
+            // Sinkronisasi data session Auth aktif secara real-time untuk topbar
             if (auth()->check()) {
                 auth()->user()->avatar = $filename;
             }
 
-            // Catat aktivitas ke Audit Trail
+            // Catat log aktivitas
             DB::table('audit_trails')->insert([
                 'table_name'   => 'users',
                 'action'       => 'UPDATE',
@@ -286,9 +317,47 @@ class UserController extends Controller
                 'created_at'   => Carbon::now(),
             ]);
 
-            return redirect()->back()->with('success', 'Foto profil Anda berhasil diperbarui dengan aman!');
+            return redirect()->back()->with('success', 'Foto profil Anda berhasil diperbarui dan foto lama telah dihapus!');
         }
 
         return redirect()->back()->with('error', 'Gagal memproses unggahan gambar, silakan coba kembali.');
+    }
+
+    /**
+     * Menghapus foto profil aktif dan mengembalikan tampilan ke inisial nama awal.
+     */
+    public function deletePhoto()
+    {
+        $user = Auth::user();
+
+        if (!empty($user->avatar)) {
+            $filePath = public_path('avatars/' . $user->avatar);
+
+            if (file_exists($filePath)) {
+                @unlink($filePath);
+            }
+
+            DB::table('users')->where('id', $user->id)->update([
+                'avatar'     => null,
+                'updated_at' => Carbon::now()
+            ]);
+
+            if (auth()->check()) {
+                auth()->user()->avatar = null;
+            }
+
+            DB::table('audit_trails')->insert([
+                'table_name'   => 'users',
+                'action'       => 'UPDATE',
+                'record_id'    => $user->id,
+                'new_values'   => json_encode(['avatar_removed' => true]),
+                'performed_by' => $user->id,
+                'created_at'   => Carbon::now(),
+            ]);
+
+            return redirect()->back()->with('success', 'Foto profil Anda berhasil dihapus, tampilan kembali ke inisial!');
+        }
+
+        return redirect()->back()->with('error', 'Anda tidak memiliki foto profil aktif untuk dihapus.');
     }
 }
