@@ -50,7 +50,7 @@ Route::middleware('auth')->group(function () {
 
     // Dashboard User Lapangan
     Route::middleware('role:user')->prefix('user')->group(function () {
-        Route::get('/dashboard', fn () => view('user.dashboard'))->name('incidents.dashboard');
+        Route::get('/dashboard', [IncidentController::class, 'userDashboard'])->name('incidents.dashboard');
     });
 
     // Profil Akun (semua role)
@@ -64,6 +64,7 @@ Route::middleware('auth')->group(function () {
     // =========================================================================
     Route::middleware('role:admin')->prefix('admin')->group(function () {
         Route::get('/dashboard', fn () => view('admin.dashboard'))->name('admin.dashboard');
+        Route::get('/dashboard/stats', [IncidentController::class, 'dashboardStats'])->name('admin.dashboard.stats');
 
         Route::get('/users',         [UserController::class, 'index'])->name('admin.users.index');
         Route::post('/users',        [UserController::class, 'store'])->name('admin.users.store');

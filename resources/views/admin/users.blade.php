@@ -379,8 +379,9 @@
         document.getElementById('inputName').value = name;
         document.getElementById('inputEmail').value = email;
         document.getElementById('inputRole').value = role;
-        
-        document.getElementById('passwordFieldWrapper').classList.add('hidden');
+
+        document.getElementById('inputPassword').value = ""; 
+        document.getElementById('inputPassword').placeholder = "Isi untuk ubah sandi (abaikan jika tidak ingin mengubah)";
         document.getElementById('inputPassword').removeAttribute('required');
     }
 

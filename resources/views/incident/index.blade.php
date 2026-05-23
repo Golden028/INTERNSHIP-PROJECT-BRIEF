@@ -115,8 +115,8 @@
                 <tbody class="text-sm text-gray-700 divide-y divide-gray-100">
                     @forelse($incidents as $incident)
                         <tr class="incident-row transition duration-200 border-b border-gray-100 
-                            {{ $incident->severity_level === 'Critical' ? 'bg-red-50 hover:bg-red-100/80 border-l-4 border-l-red-500' : '' }}
-                            {{ $incident->severity_level === 'Warning' ? 'bg-amber-50/50 hover:bg-amber-100/60 border-l-4 border-l-amber-400' : '' }}
+                            {{ $incident->severity_level === 'Critical' ? 'bg-red-50/50 hover:bg-red-100/50 border-l-4 border-l-red-500' : '' }}
+                            {{ $incident->severity_level === 'Warning' ? 'bg-amber-50/30 hover:bg-amber-100/40 border-l-4 border-l-amber-400' : '' }}
                             {{ $incident->severity_level === 'Normal' ? 'bg-white hover:bg-gray-50 border-l-4 border-l-transparent' : '' }}" 
                             data-room="{{ $incident->room_id ?? 'Ruang 1' }}" 
                             data-severity="{{ $incident->severity_level }}"
@@ -317,6 +317,21 @@
     let filteredRows = [];
 
     document.addEventListener("DOMContentLoaded", function() {
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const roomParam = urlParams.get('room');
+        const severityParam = urlParams.get('severity');
+
+        // 2. Terapkan filter jika ada parameter di URL
+        if (roomParam) {
+            document.getElementById('filterRuang').value = roomParam;
+        }
+        if (severityParam) {
+            document.getElementById('filterSeverity').value = severityParam;
+        }
+
+        // 3. Jalankan filtering dan pagination
+        filterIncidentTable();
         // Jalankan inisialisasi pagination pertama kali halaman di-load
         initPagination();
 

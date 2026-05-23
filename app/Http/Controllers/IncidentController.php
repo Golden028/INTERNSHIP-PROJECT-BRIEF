@@ -321,4 +321,78 @@ class IncidentController extends Controller
 
         return response()->stream($callback, 200, $headers);
     }
+
+    /**
+     * API untuk Chart Real-time Dashboard Admin
+     */
+    public function dashboardStats()
+    {
+        try {
+            $user = Auth::user();
+
+            if ($user->role !== 'admin') {
+                return response()->json(['error' => 'Unauthorized'], 403);
+            }
+
+            // --- PERUBAHAN LOGIKA PENGHITUNGAN USER ---
+            $isHeadAdmin = ($user->id === 1); // Cek apakah ini Head Admin (ID 1)
+            
+            $countAdmins = DB::table('users')->where('role', 'admin')->count();
+            $countUsers  = DB::table('users')->where('role', 'user')->count();
+
+            if ($isHeadAdmin) {
+                // Head Admin melihat total semua
+                $totalUsers = $countAdmins + $countUsers;
+                $userTitle  = "Total Pengguna Sistem";
+                $userSubtitle = "{$countAdmins} Admin & {$countUsers} Staf Lapangan";
+            } else {
+                // Admin biasa hanya melihat staf lapangan
+                $totalUsers = $countUsers;
+                $userTitle  = "Total Staf Lapangan Aktif";
+                $userSubtitle = "Sistem Terkelola";
+            }
+            // ------------------------------------------
+
+            $totalIncidents = DB::table('incident_logs')->whereNull('deleted_at')->count();
+
+            $severityData = DB::table('incident_logs')
+                ->select('severity_level', DB::raw('count(*) as total'))
+                ->whereNull('deleted_at')
+                ->groupBy('severity_level')
+                ->get();
+
+            $roomData = DB::table('incident_logs')
+                ->select('room_id', DB::raw('count(*) as total'))
+                ->whereNull('deleted_at')
+                ->groupBy('room_id')
+                ->get();
+
+            return response()->json([
+                'total_users'     => $totalUsers,
+                'user_title'      => $userTitle,       // Kirim judul kartu ke view
+                'user_subtitle'   => $userSubtitle,    // Kirim subjudul kartu ke view
+                'total_incidents' => $totalIncidents,
+                'severity_data'   => $severityData,
+                'room_data'       => $roomData
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function userDashboard()
+    {
+        // Ambil 5 data insiden terakhir yang dibuat oleh user ini
+        $recentIncidents = DB::table('incident_logs')
+            ->where('performed_by', Auth::id())
+            ->whereNull('deleted_at')
+            ->orderBy('created_at', 'desc')
+            ->limit(5)
+            ->get();
+
+        return view('user.dashboard', compact('recentIncidents'));
+    }
+
+    
 }
