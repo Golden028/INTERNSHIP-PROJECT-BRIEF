@@ -123,9 +123,9 @@
                                 {{ $incident->room_id ?? 'Ruang 1' }}
                             </td>
                             
-                            <td class="px-6 py-4">
-                                <div class="font-bold text-gray-900">{{ $incident->title }}</div>
-                                <div class="text-xs text-gray-500 mt-0.5">{{ $incident->description ?? 'Tidak ada catatan kronologi.' }}</div>
+                            <td class="px-6 py-4 max-w-xs break-words whitespace-normal">
+                                <div class="font-bold text-gray-900 break-words">{{ $incident->title }}</div>
+                                <div class="text-xs text-gray-500 mt-0.5 break-words line-clamp-2">{{ $incident->description ?? 'Tidak ada catatan kronologi.' }}</div>
                             </td>
                             
                             <td class="px-6 py-4 font-bold whitespace-nowrap">

@@ -17,16 +17,20 @@
     {{-- Filter --}}
     <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
-            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">Filter Tipe</label>
+          <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">Filter Tipe</label>
             <select id="filterType" onchange="filterAndPaginate()" class="w-full mt-1.5 p-2 bg-slate-50 border border-gray-300 rounded-lg text-xs focus:outline-emerald-600 font-semibold text-gray-700">
                 <option value="ALL">Semua Tipe</option>
                 <option value="incident_new">Laporan Insiden Baru</option>
                 <option value="incident_edit">Edit Insiden</option>
                 <option value="incident_delete">Hapus Insiden</option>
                 <option value="incident_status">Perubahan Status</option>
-                <option value="user_add">Tambah Pengguna</option>
-                <option value="user_edit">Edit Pengguna</option>
-                <option value="user_delete">Hapus Pengguna</option>
+                
+                {{-- Hanya tampilkan filter user jika yang login adalah admin --}}
+                @if(auth()->user()->role === 'admin')
+                    <option value="user_add">Tambah Pengguna</option>
+                    <option value="user_edit">Edit Pengguna</option>
+                    <option value="user_delete">Hapus Pengguna</option>
+                @endif
             </select>
         </div>
         <div>

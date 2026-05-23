@@ -35,6 +35,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/notifications/fetch',    [NotificationController::class, 'fetch'])->name('notifications.fetch');
     Route::post('/notifications/read/{id}', [NotificationController::class, 'markRead'])->name('notifications.read');
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.read_all');
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.page');
 
     // =========================================================================
     // Log Insiden Bersama (Admin & User)

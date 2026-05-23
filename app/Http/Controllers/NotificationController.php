@@ -78,4 +78,10 @@ class NotificationController extends Controller
 
         return response()->json(['ok' => true]);
     }
+
+    public function index()
+    {
+        // Memanggil file resources/views/layout/notifications.blade.php
+        return view('layout.notifications');
+    }
 }

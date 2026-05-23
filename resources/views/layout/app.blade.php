@@ -37,36 +37,62 @@
 </head>
 <body class="bg-gray-100 font-sans flex h-screen overflow-hidden">
 
-    <aside class="w-64 bg-slate-900 text-white flex flex-col justify-between flex-shrink-0">
+    <aside class="w-64 bg-gradient-to-b from-slate-900 to-slate-800 text-white flex flex-col justify-between flex-shrink-0 border-r border-slate-700/50 shadow-2xl relative z-20">
         <div>
-            <div class="p-5 text-xl font-bold tracking-wider border-b border-slate-800 flex items-center gap-3">
-                <i class="fa-solid fa-leaf text-emerald-400"></i>
-                <span>Greenfields</span>
+            {{-- Header / Logo Area --}}
+            <div class="p-6 text-xl font-extrabold tracking-wide border-b border-slate-700/50 bg-slate-900/40 flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30 shadow-inner">
+                    <i class="fa-solid fa-leaf text-emerald-400 text-sm"></i>
+                </div>
+                <span class="bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-300">Greenfields</span>
             </div>
-            <nav class="p-4 space-y-2">
+
+            {{-- Navigation --}}
+            <nav class="p-4 space-y-1.5">
                 @if(auth()->user()->role === 'admin')
-                    <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg {{ request()->routeIs('admin.dashboard') ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white' }} font-medium transition">
-                        <i class="fa-solid fa-chart-line w-5"></i> Dashboard Admin
+                    <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200 group {{ request()->routeIs('admin.dashboard') ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-lg shadow-emerald-500/20 border border-emerald-400/20' : 'text-slate-400 hover:bg-slate-700/40 hover:text-white' }}">
+                        <i class="fa-solid fa-chart-line w-5 text-center transition-colors {{ request()->routeIs('admin.dashboard') ? 'text-white' : 'group-hover:text-emerald-400' }}"></i> 
+                        <span>Dashboard Admin</span>
                     </a>
-                    <a href="{{ route('admin.users.index') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg {{ request()->routeIs('admin.users.index') ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white' }} font-medium transition">
-                        <i class="fa-solid fa-users w-5"></i> Kelola Pengguna
+                    <a href="{{ route('admin.users.index') }}" class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200 group {{ request()->routeIs('admin.users.index') ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-lg shadow-emerald-500/20 border border-emerald-400/20' : 'text-slate-400 hover:bg-slate-700/40 hover:text-white' }}">
+                        <i class="fa-solid fa-users w-5 text-center transition-colors {{ request()->routeIs('admin.users.index') ? 'text-white' : 'group-hover:text-emerald-400' }}"></i> 
+                        <span>Kelola Pengguna</span>
                     </a>
                 @else
-                    <a href="{{ route('incidents.dashboard') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg {{ request()->routeIs('incidents.dashboard') ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white' }} font-medium transition">
-                        <i class="fa-solid fa-gauge-high w-5"></i> Dashboard User
+                    <a href="{{ route('incidents.dashboard') }}" class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200 group {{ request()->routeIs('incidents.dashboard') ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-lg shadow-emerald-500/20 border border-emerald-400/20' : 'text-slate-400 hover:bg-slate-700/40 hover:text-white' }}">
+                        <i class="fa-solid fa-gauge-high w-5 text-center transition-colors {{ request()->routeIs('incidents.dashboard') ? 'text-white' : 'group-hover:text-emerald-400' }}"></i> 
+                        <span>Dashboard User</span>
                     </a>
                 @endif
-                <a href="{{ route('incidents.index') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg {{ request()->routeIs('incidents.index') ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white' }} transition">
-                    <i class="fa-solid fa-triangle-exclamation w-5"></i> Log Insiden
+                
+                <a href="{{ route('incidents.index') }}" class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200 group {{ request()->routeIs('incidents.index') ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-lg shadow-emerald-500/20 border border-emerald-400/20' : 'text-slate-400 hover:bg-slate-700/40 hover:text-white' }}">
+                    <i class="fa-solid fa-triangle-exclamation w-5 text-center transition-colors {{ request()->routeIs('incidents.index') ? 'text-white' : 'group-hover:text-emerald-400' }}"></i> 
+                    <span>Log Insiden</span>
                 </a>
-                <a href="{{ route('notifications.page') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg {{ request()->routeIs('notifications.page') ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white' }} transition">
-                    <i class="fa-solid fa-bell w-5"></i> Notifikasi
-                    <span id="sidebarNotifBadge" class="hidden ml-auto bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none"></span>
+                
+                <a href="{{ route('notifications.page') }}" class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200 group {{ request()->routeIs('notifications.page') ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-lg shadow-emerald-500/20 border border-emerald-400/20' : 'text-slate-400 hover:bg-slate-700/40 hover:text-white' }}">
+                    <div class="relative w-5 text-center">
+                        <i class="fa-solid fa-bell transition-colors {{ request()->routeIs('notifications.page') ? 'text-white' : 'group-hover:text-emerald-400' }}"></i>
+                    </div>
+                    <span>Notifikasi</span>
+                    <span id="sidebarNotifBadge" class="hidden ml-auto bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm leading-none border border-rose-400/50"></span>
                 </a>
             </nav>
         </div>
-        <div class="p-4 border-t border-slate-800 text-xs text-slate-500 bg-slate-950 font-mono text-center">
-            Role: <span class="text-emerald-400 font-bold uppercase">{{ auth()->user()->role }}</span>
+
+        {{-- Footer / User Role Info --}}
+        <div class="p-4 bg-slate-900/60 backdrop-blur-md border-t border-slate-700/50">
+            <div class="flex items-center justify-center gap-2 text-xs text-slate-400 font-medium bg-slate-950/50 py-2.5 rounded-lg border border-slate-800">
+                <span>Akses Level:</span>
+                <span class="text-emerald-400 font-bold uppercase tracking-wide flex items-center gap-1.5">
+                    @if(auth()->user()->role === 'admin')
+                        <i class="fa-solid fa-shield-halved text-[10px]"></i>
+                    @else
+                        <i class="fa-solid fa-user-shield text-[10px]"></i>
+                    @endif
+                    {{ auth()->user()->role }}
+                </span>
+            </div>
         </div>
     </aside>
 
