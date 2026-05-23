@@ -67,10 +67,12 @@ class IncidentController extends Controller
         // Rekam ke Audit Trail
         DB::table('audit_trails')->insert([
             'table_name'   => 'incident_logs',
-            'action'       => 'INSERT',
+            'action'       => 'INSERT', 
             'record_id'    => $incidentId,
+            // KARENA DATA BARU: old_values diisi null, dan new_values mengambil dari data yang divalidasi
+            'old_values'   => null, 
             'new_values'   => json_encode(array_merge($validated, ['reported_by_name' => Auth::user()->name, 'status' => 'Open'])),
-            'performed_by' => Auth::id(),
+            'performed_by' => Auth::id(), 
             'created_at'   => Carbon::now(),
         ]);
 
@@ -367,11 +369,14 @@ class IncidentController extends Controller
                 ->groupBy('room_id')
                 ->get();
 
+            $totalAuditTrails = DB::table('audit_trails')->count();
+
             return response()->json([
                 'total_users'     => $totalUsers,
-                'user_title'      => $userTitle,       // Kirim judul kartu ke view
-                'user_subtitle'   => $userSubtitle,    // Kirim subjudul kartu ke view
+                'user_title'      => $userTitle,       
+                'user_subtitle'   => $userSubtitle,    
                 'total_incidents' => $totalIncidents,
+                'total_audits'    => $totalAuditTrails, // <-- PASTIKAN BARIS INI ADA DI SINI
                 'severity_data'   => $severityData,
                 'room_data'       => $roomData
             ]);

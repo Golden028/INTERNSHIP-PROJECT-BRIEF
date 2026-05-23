@@ -17,8 +17,9 @@
         </div>
     </div>
 
-    {{-- Kartu Indikator Utama (KPI) - SEKARANG BISA DIKLIK --}}
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    {{-- Kartu Indikator Utama (KPI) - SEKARANG MENJADI 3 KOLOM --}}
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {{-- Total Pengguna --}}
         <div onclick="window.location.href='{{ route('admin.users.index') }}'" 
              class="cursor-pointer bg-gradient-to-br from-slate-800 to-slate-900 p-6 rounded-2xl shadow-lg border border-slate-700 relative overflow-hidden group hover:opacity-95 hover:scale-[1.01] transition-all duration-200">
             <div class="absolute right-[-10%] top-[-10%] text-slate-700/50 text-8xl group-hover:scale-110 transition-transform duration-500">
@@ -35,6 +36,7 @@
             </div>
         </div>
 
+        {{-- Total Insiden --}}
         <div onclick="window.location.href='{{ route('incidents.index') }}'" 
              class="cursor-pointer bg-gradient-to-br from-emerald-600 to-emerald-700 p-6 rounded-2xl shadow-lg border border-emerald-500 relative overflow-hidden group hover:opacity-95 hover:scale-[1.01] transition-all duration-200">
             <div class="absolute right-[-10%] top-[-10%] text-emerald-800/30 text-8xl group-hover:scale-110 transition-transform duration-500">
@@ -46,6 +48,21 @@
                     <i class="fa-solid fa-spinner fa-spin text-sm text-emerald-300"></i>
                 </h3>
                 <p class="text-xs text-emerald-100 mt-2 font-medium"><i class="fa-solid fa-rotate text-emerald-200"></i> Klik untuk melihat daftar</p>
+            </div>
+        </div>
+
+        {{-- KARTU BARU: Total Audit Trails --}}
+        <div onclick="window.location.href='{{ route('admin.audit.index') }}'" 
+             class="cursor-pointer bg-gradient-to-br from-blue-600 to-blue-700 p-6 rounded-2xl shadow-lg border border-blue-500 relative overflow-hidden group hover:opacity-95 hover:scale-[1.01] transition-all duration-200">
+            <div class="absolute right-[-10%] top-[-10%] text-blue-800/30 text-8xl group-hover:scale-110 transition-transform duration-500">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+            </div>
+            <div class="relative z-10">
+                <p class="text-blue-100 text-sm font-semibold uppercase tracking-wider mb-1">Total Riwayat Audit</p>
+                <h3 class="text-4xl font-black text-white" id="kpiTotalAudits">
+                    <i class="fa-solid fa-spinner fa-spin text-sm text-blue-300"></i>
+                </h3>
+                <p class="text-xs text-blue-100 mt-2 font-medium"><i class="fa-solid fa-rotate text-blue-200"></i> Klik Pelacakan Sistem</p>
             </div>
         </div>
     </div>
@@ -93,12 +110,10 @@
                 maintainAspectRatio: false, 
                 plugins: { legend: { display: false } }, 
                 scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
-                // Logika Klik Batang Grafik Ruangan
                 onClick: (e, elements, chart) => {
                     if (elements.length > 0) {
                         const index = elements[0].index;
                         const roomLabel = chart.data.labels[index];
-                        // Mengarahkan ke halaman log insiden dengan membawa parameter filter ruang
                         window.location.href = "{{ route('incidents.index') }}?room=" + encodeURIComponent(roomLabel);
                     }
                 }
@@ -115,12 +130,10 @@
                 maintainAspectRatio: false, 
                 plugins: { legend: { display: false } }, 
                 scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
-                // Logika Klik Batang Grafik Tingkat Keparahan
                 onClick: (e, elements, chart) => {
                     if (elements.length > 0) {
                         const index = elements[0].index;
                         const severityLabel = chart.data.labels[index];
-                        // Mengarahkan ke halaman log insiden dengan membawa parameter filter keparahan
                         window.location.href = "{{ route('incidents.index') }}?severity=" + encodeURIComponent(severityLabel);
                     }
                 }
@@ -148,8 +161,7 @@
                 document.getElementById('kpiUserTitle').innerText = data.user_title;       
                 document.getElementById('kpiUserSubtitle').innerText = data.user_subtitle; 
                 document.getElementById('kpiTotalIncidents').innerText = data.total_incidents + " Insiden";
-
-                // --- POSISI KODE BARU DIMULAI DI SINI ---
+                document.getElementById('kpiTotalAudits').innerText = data.total_audits + " Log"; // <-- Update Nilai Audit Trail
 
                 // 2. Update Data Chart Ruangan
                 const allRooms = ['Ruang 1', 'Ruang 2', 'Ruang 3', 'Ruang 4', 'Ruang 5'];
@@ -171,7 +183,6 @@
                 severityChart.data.labels = allSeverities;
                 severityChart.data.datasets[0].data = sevValues;
 
-                // Update warna agar sesuai status
                 severityChart.data.datasets[0].backgroundColor = allSeverities.map(level => {
                     if(level === 'Critical') return colors.red;
                     if(level === 'Warning') return colors.amber;
@@ -188,6 +199,7 @@
                 console.error("Kesalahan sinkronisasi data:", error);
                 document.getElementById('kpiTotalUsers').innerText = "Gagal (Error)";
                 document.getElementById('kpiTotalIncidents').innerText = "Gagal (Error)";
+                document.getElementById('kpiTotalAudits').innerText = "Gagal (Error)";
             }
         }
 

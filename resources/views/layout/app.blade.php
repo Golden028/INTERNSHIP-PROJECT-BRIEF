@@ -61,6 +61,12 @@
                         <i class="fa-solid fa-users w-5 text-center transition-colors {{ request()->routeIs('admin.users.index') ? 'text-white' : 'group-hover:text-emerald-400' }}"></i> 
                         <span>Kelola Pengguna</span>
                     </a>
+
+                    {{-- MASUKKAN DI SINI (Hanya muncul jika dia Admin) --}}
+                    <a href="{{ route('admin.audit.index') }}" class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200 group {{ request()->routeIs('admin.audit.index') ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-lg shadow-emerald-500/20 border border-emerald-400/20' : 'text-slate-400 hover:bg-slate-700/40 hover:text-white' }}">
+                        <i class="fa-solid fa-clock-rotate-left w-5 text-center transition-colors {{ request()->routeIs('admin.audit.index') ? 'text-white' : 'group-hover:text-emerald-400' }}"></i> 
+                        <span>Audit Trails</span>
+                    </a>
                 @else
                     <a href="{{ route('incidents.dashboard') }}" class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200 group {{ request()->routeIs('incidents.dashboard') ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-lg shadow-emerald-500/20 border border-emerald-400/20' : 'text-slate-400 hover:bg-slate-700/40 hover:text-white' }}">
                         <i class="fa-solid fa-gauge-high w-5 text-center transition-colors {{ request()->routeIs('incidents.dashboard') ? 'text-white' : 'group-hover:text-emerald-400' }}"></i> 
@@ -68,6 +74,7 @@
                     </a>
                 @endif
                 
+                {{-- Menu Log Insiden dan Notifikasi (Bisa dilihat Admin & User) --}}
                 <a href="{{ route('incidents.index') }}" class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200 group {{ request()->routeIs('incidents.index') ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-lg shadow-emerald-500/20 border border-emerald-400/20' : 'text-slate-400 hover:bg-slate-700/40 hover:text-white' }}">
                     <i class="fa-solid fa-triangle-exclamation w-5 text-center transition-colors {{ request()->routeIs('incidents.index') ? 'text-white' : 'group-hover:text-emerald-400' }}"></i> 
                     <span>Log Insiden</span>

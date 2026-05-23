@@ -7,6 +7,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\IncidentController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\AuditTrailController;
 
 // Root redirect
 Route::get('/', function () {
@@ -71,5 +72,8 @@ Route::middleware('auth')->group(function () {
         Route::put('/users/{id}',    [UserController::class, 'update'])->name('admin.users.update');
         Route::delete('/users/{id}', [UserController::class, 'destroy'])->name('admin.users.destroy');
         Route::get('/users/export',  [UserController::class, 'export'])->name('admin.users.export');
+
+        Route::get('/audit-trails', [AuditTrailController::class, 'index'])->name('admin.audit.index');
+        Route::get('/audit-trails/export', [AuditTrailController::class, 'export'])->name('admin.audit.export');
     });
 });
