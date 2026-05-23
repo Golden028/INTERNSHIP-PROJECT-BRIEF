@@ -114,7 +114,10 @@
                 </thead>
                 <tbody class="text-sm text-gray-700 divide-y divide-gray-100">
                     @forelse($incidents as $incident)
-                        <tr class="incident-row {{ $incident->severity_level === 'Critical' ? 'highlight-critical' : '' }} hover:bg-gray-50/50 transition" 
+                        <tr class="incident-row transition duration-200 border-b border-gray-100 
+                            {{ $incident->severity_level === 'Critical' ? 'bg-red-50 hover:bg-red-100/80 border-l-4 border-l-red-500' : '' }}
+                            {{ $incident->severity_level === 'Warning' ? 'bg-amber-50/50 hover:bg-amber-100/60 border-l-4 border-l-amber-400' : '' }}
+                            {{ $incident->severity_level === 'Normal' ? 'bg-white hover:bg-gray-50 border-l-4 border-l-transparent' : '' }}" 
                             data-room="{{ $incident->room_id ?? 'Ruang 1' }}" 
                             data-severity="{{ $incident->severity_level }}"
                             data-status="{{ $incident->status ?? 'Open' }}">
