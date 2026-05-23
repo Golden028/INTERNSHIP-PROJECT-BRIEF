@@ -6,15 +6,14 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
+use App\Helpers\NotificationHelper;
 
 class IncidentController extends Controller
 {
-    // Tampilan Bersama: Dipakai oleh Route /incidents (Admin melihat semua, User hanya melihat miliknya)
+    // Tampilan Bersama: Dipakai oleh Route /incidents
     public function index()
     {
-        // 1. Cek hak akses role user yang sedang login
         if (Auth::user()->role === 'admin') {
-            // Admin: Mengambil semua log insiden yang belum dihapus
             $incidents = DB::select("
                 SELECT * FROM incident_logs 
                 WHERE deleted_at IS NULL 
@@ -27,7 +26,6 @@ class IncidentController extends Controller
                     created_at DESC
             ");
         } else {
-            // User Biasa: Hanya mengambil log insiden yang dibuat oleh dirinya sendiri
             $incidents = DB::select("
                 SELECT * FROM incident_logs 
                 WHERE deleted_at IS NULL AND performed_by = ?
@@ -54,33 +52,52 @@ class IncidentController extends Controller
             'severity_level' => 'required|in:Normal,Warning,Critical',
         ]);
 
-        // Menyimpan masukan ke database beserta pengenal user ('performed_by')
         $incidentId = DB::table('incident_logs')->insertGetId([
             'room_id'           => $validated['room_id'],
             'title'             => $validated['title'],
             'description'       => $validated['description'],
             'severity_level'    => $validated['severity_level'],
-            'status'            => 'Open', 
-            'reported_by_name'  => Auth::user()->name, 
-            'performed_by'      => Auth::id(), 
-            'created_at'        => Carbon::now(), // Diseragamkan menggunakan alias import
+            'status'            => 'Open',
+            'reported_by_name'  => Auth::user()->name,
+            'performed_by'      => Auth::id(),
+            'created_at'        => Carbon::now(),
             'updated_at'        => Carbon::now(),
         ]);
 
         // Rekam ke Audit Trail
         DB::table('audit_trails')->insert([
-            'table_name'  => 'incident_logs',
-            'action'      => 'INSERT',
-            'record_id'   => $incidentId,
-            'new_values'  => json_encode(array_merge($validated, ['reported_by_name' => Auth::user()->name, 'status' => 'Open'])),
-            'performed_by'=> Auth::id(),
-            'created_at'  => Carbon::now(),
+            'table_name'   => 'incident_logs',
+            'action'       => 'INSERT',
+            'record_id'    => $incidentId,
+            'new_values'   => json_encode(array_merge($validated, ['reported_by_name' => Auth::user()->name, 'status' => 'Open'])),
+            'performed_by' => Auth::id(),
+            'created_at'   => Carbon::now(),
         ]);
+
+        // ── NOTIFIKASI ─────────────────────────────────────────────────────────
+        // 1. Beritahu semua ADMIN ada laporan baru
+        NotificationHelper::notifyAdminNewIncident(
+            $incidentId,
+            $validated['title'],
+            $validated['room_id'],
+            $validated['severity_level'],
+            Auth::user()->name
+        );
+
+        // 2. Beritahu USER SENDIRI bahwa laporannya berhasil masuk
+        NotificationHelper::notifyUserOwnIncidentCreated(
+            Auth::id(),
+            $incidentId,
+            $validated['title'],
+            $validated['room_id'],
+            $validated['severity_level']
+        );
+        // ───────────────────────────────────────────────────────────────────────
 
         return redirect()->route('incidents.index')->with('success', 'Log kendala operasional berhasil dicatatkan!');
     }
 
-    // Proses Memperbarui Data (Kembali ke /incidents dan merubah data)
+    // Proses Memperbarui Data
     public function update(Request $request, $id)
     {
         $oldData = DB::table('incident_logs')->where('id', $id)->whereNull('deleted_at')->first();
@@ -93,6 +110,7 @@ class IncidentController extends Controller
             return redirect()->route('incidents.index')->with('error', 'Anda tidak memiliki hak akses untuk mengubah data ini.');
         }
 
+        // ── ADMIN: update status saja ─────────────────────────────────────────
         if (Auth::user()->role === 'admin' && !$request->has('title')) {
             $validated = $request->validate([
                 'status' => 'required|in:Open,In Progress,Resolved',
@@ -105,47 +123,109 @@ class IncidentController extends Controller
 
             $newValues = ['status' => $validated['status']];
             $oldValues = ['status' => $oldData->status];
-        } else {
-            $validated = $request->validate([
-                'room_id'        => 'required|in:Ruang 1,Ruang 2,Ruang 3,Ruang 4,Ruang 5',
-                'title'          => 'required|string|max:150',
-                'description'    => 'nullable|string',
-                'severity_level' => 'required|in:Normal,Warning,Critical',
+
+            DB::table('incident_logs')->where('id', $id)->update($updateData);
+
+            DB::table('audit_trails')->insert([
+                'table_name'  => 'incident_logs',
+                'action'      => 'UPDATE',
+                'record_id'   => $id,
+                'old_values'  => json_encode($oldValues),
+                'new_values'  => json_encode($newValues),
+                'performed_by'=> Auth::id(),
+                'created_at'  => Carbon::now(),
             ]);
 
-            $updateData = [
-                'room_id'        => $validated['room_id'],
-                'title'          => $validated['title'],
-                'description'    => $validated['description'],
-                'severity_level' => $validated['severity_level'],
-                'updated_at'     => Carbon::now(),
-            ];
+            // ── NOTIFIKASI ─────────────────────────────────────────────────────
+            // Beritahu semua ADMIN bahwa ada perubahan status
+            NotificationHelper::notifyAdminEditIncident(
+                (int) $id,
+                $oldData->title,
+                Auth::user()->name
+            );
 
-            $newValues = $validated;
-            $oldValues = [
-                'room_id'        => $oldData->room_id,
-                'title'          => $oldData->title,
-                'description'    => $oldData->description,
-                'severity_level' => $oldData->severity_level,
-            ];
+            // Beritahu USER PEMILIK insiden bahwa statusnya berubah
+            if ($oldData->performed_by && $oldData->status !== $validated['status']) {
+                NotificationHelper::notifyUserStatusChanged(
+                    (int) $oldData->performed_by,
+                    (int) $id,
+                    $oldData->title,
+                    $oldData->status,
+                    $validated['status'],
+                    Auth::user()->name
+                );
+            }
+            // ──────────────────────────────────────────────────────────────────
+
+            return redirect()->route('incidents.index')->with('success', 'Status insiden berhasil diperbarui!');
         }
+
+        // ── USER / ADMIN: edit konten insiden ─────────────────────────────────
+        $validated = $request->validate([
+            'room_id'        => 'required|in:Ruang 1,Ruang 2,Ruang 3,Ruang 4,Ruang 5',
+            'title'          => 'required|string|max:150',
+            'description'    => 'nullable|string',
+            'severity_level' => 'required|in:Normal,Warning,Critical',
+        ]);
+
+        $updateData = [
+            'room_id'        => $validated['room_id'],
+            'title'          => $validated['title'],
+            'description'    => $validated['description'],
+            'severity_level' => $validated['severity_level'],
+            'updated_at'     => Carbon::now(),
+        ];
+
+        $oldValues = [
+            'room_id'        => $oldData->room_id,
+            'title'          => $oldData->title,
+            'description'    => $oldData->description,
+            'severity_level' => $oldData->severity_level,
+        ];
 
         DB::table('incident_logs')->where('id', $id)->update($updateData);
 
         DB::table('audit_trails')->insert([
-            'table_name' => 'incident_logs',
-            'action'     => 'UPDATE',
-            'record_id'  => $id,
-            'old_values' => json_encode($oldValues),
-            'new_values' => json_encode($newValues),
+            'table_name'  => 'incident_logs',
+            'action'      => 'UPDATE',
+            'record_id'   => $id,
+            'old_values'  => json_encode($oldValues),
+            'new_values'  => json_encode($validated),
             'performed_by'=> Auth::id(),
-            'created_at' => Carbon::now(),
+            'created_at'  => Carbon::now(),
         ]);
+
+        // ── NOTIFIKASI ─────────────────────────────────────────────────────────
+        // Beritahu semua ADMIN ada insiden yang diedit
+        NotificationHelper::notifyAdminEditIncident(
+            (int) $id,
+            $validated['title'],
+            Auth::user()->name
+        );
+
+        // Jika yang edit bukan pemilik (admin yg edit milik user), beritahu user pemilik
+        if ($oldData->performed_by && $oldData->performed_by !== Auth::id()) {
+            NotificationHelper::notifyUserOwnIncidentEdited(
+                (int) $oldData->performed_by,
+                (int) $id,
+                $validated['title'],
+                Auth::user()->name
+            );
+        } else {
+            // Pemilik yang edit sendiri — tetap beri konfirmasi ke dirinya sendiri
+            NotificationHelper::notifyUserOwnIncidentEdited(
+                Auth::id(),
+                (int) $id,
+                $validated['title'],
+                Auth::user()->name
+            );
+        }
+        // ───────────────────────────────────────────────────────────────────────
 
         return redirect()->route('incidents.index')->with('success', 'Log insiden berhasil diperbarui!');
     }
 
-    // Mekanisme Penghapusan Data Aman
+    // Mekanisme Penghapusan Data Aman (Soft Delete)
     public function destroy($id)
     {
         $oldData = DB::table('incident_logs')->where('id', $id)->whereNull('deleted_at')->first();
@@ -163,44 +243,64 @@ class IncidentController extends Controller
         ]);
 
         DB::table('audit_trails')->insert([
-            'table_name' => 'incident_logs',
-            'action'     => 'SOFT_DELETE',
-            'record_id'  => $id,
-            'old_values' => json_encode($oldData),
+            'table_name'  => 'incident_logs',
+            'action'      => 'SOFT_DELETE',
+            'record_id'   => $id,
+            'old_values'  => json_encode($oldData),
             'performed_by'=> Auth::id(),
-            'created_at' => Carbon::now(),
+            'created_at'  => Carbon::now(),
         ]);
+
+        // ── NOTIFIKASI ─────────────────────────────────────────────────────────
+        // Beritahu semua ADMIN
+        NotificationHelper::notifyAdminDeleteIncident(
+            (int) $id,
+            $oldData->title,
+            Auth::user()->name
+        );
+
+        // Jika yang hapus bukan pemilik (admin hapus milik user), beritahu user pemilik
+        if ($oldData->performed_by && $oldData->performed_by !== Auth::id()) {
+            NotificationHelper::notifyUserOwnIncidentDeleted(
+                (int) $oldData->performed_by,
+                $oldData->title,
+                Auth::user()->name
+            );
+        } else {
+            // Pemilik hapus sendiri — konfirmasi ke dirinya
+            NotificationHelper::notifyUserOwnIncidentDeleted(
+                Auth::id(),
+                $oldData->title,
+                Auth::user()->name
+            );
+        }
+        // ───────────────────────────────────────────────────────────────────────
 
         return redirect()->route('incidents.index')->with('success', 'Log insiden berhasil di-soft-delete dengan aman!');
     }
 
-    // ==========================================
-    // DOWNLOAD EXCEL (DENGAN FORMAT RAMAH EXCEL & NO ######)
-    // ==========================================
+    // Download CSV / Excel
     public function export()
     {
         if (Auth::user()->role === 'admin') {
-            $data = DB::table('incident_logs')->whereNull('deleted_at')->orderBy('created_at', 'desc')->get();
+            $data     = DB::table('incident_logs')->whereNull('deleted_at')->orderBy('created_at', 'desc')->get();
             $filename = 'Semua_Log_Insiden_' . date('Ymd_His') . '.csv';
         } else {
-            $data = DB::table('incident_logs')->whereNull('deleted_at')->where('performed_by', Auth::id())->orderBy('created_at', 'desc')->get();
+            $data     = DB::table('incident_logs')->whereNull('deleted_at')->where('performed_by', Auth::id())->orderBy('created_at', 'desc')->get();
             $filename = 'Log_Insiden_Saya_' . date('Ymd_His') . '.csv';
         }
 
         $headers = [
-            'Content-Type' => 'text/csv',
+            'Content-Type'        => 'text/csv',
             'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-            'Pragma' => 'no-cache',
-            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
-            'Expires' => '0'
+            'Pragma'              => 'no-cache',
+            'Cache-Control'       => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires'             => '0',
         ];
 
-        $callback = function() use ($data) {
+        $callback = function () use ($data) {
             $file = fopen('php://output', 'w');
-            
-            // Masukkan UTF-8 BOM Injection
-            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
-
+            fprintf($file, chr(0xEF) . chr(0xBB) . chr(0xBF));
             fputcsv($file, ['ID Log', 'ID Ruang', 'Judul Masalah / Kendala', 'Deskripsi Kronologi', 'Tingkat Keparahan', 'Status Kerja', 'Nama Pelapor', 'Waktu Kejadian']);
 
             foreach ($data as $row) {
@@ -212,10 +312,10 @@ class IncidentController extends Controller
                     $row->severity_level,
                     $row->status,
                     $row->reported_by_name,
-                    $row->created_at ? date('d-m-Y H:i', strtotime($row->created_at)) : '-'
+                    $row->created_at ? date('d-m-Y H:i', strtotime($row->created_at)) : '-',
                 ]);
             }
-            
+
             fclose($file);
         };
 
