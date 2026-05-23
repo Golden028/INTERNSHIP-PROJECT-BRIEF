@@ -16,7 +16,8 @@
         
         <div class="text-center mb-8">
             <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm border border-emerald-200">
-                <i class="fa-solid fa-cow text-3xl"></i> </div>
+                <i class="fa-solid fa-cow text-3xl"></i> 
+            </div>
             <h2 class="text-3xl font-extrabold text-slate-800 tracking-tight">Greenfields</h2>
             <p class="text-sm text-slate-600 mt-2 font-medium">Sistem Manajemen Insiden Terintegrasi</p>
         </div>

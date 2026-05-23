@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Greenfields Operational MVP</title>
+    
+        <link rel="icon" type="image/svg+xml" href="https://api.iconify.design/fa6-solid/cow.svg?color=%23059669">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -40,9 +43,9 @@
     <aside class="w-64 bg-gradient-to-b from-slate-900 to-slate-800 text-white flex flex-col justify-between flex-shrink-0 border-r border-slate-700/50 shadow-2xl relative z-20">
         <div>
             {{-- Header / Logo Area --}}
-            <div class="p-6 text-xl font-extrabold tracking-wide border-b border-slate-700/50 bg-slate-900/40 flex items-center gap-3">
-                <div class="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30 shadow-inner">
-                    <i class="fa-solid fa-leaf text-emerald-400 text-sm"></i>
+            <div class="p-6 text-xl font-extrabold tracking-wide border-b border-slate-700/50 bg-slate-900/40 flex flex-row items-center justify-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30 shadow-inner flex-shrink-0">
+                    <i class="fa-solid fa-cow text-xl text-emerald-400"></i>
                 </div>
                 <span class="bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-300">Greenfields</span>
             </div>
