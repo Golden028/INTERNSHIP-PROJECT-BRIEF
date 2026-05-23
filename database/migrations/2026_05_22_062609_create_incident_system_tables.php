@@ -23,7 +23,6 @@ return new class extends Migration
             $table->foreignId('performed_by')->nullable()->constrained('users')->onDelete('set null'); // Menangkap ID akun untuk relasi data personal user
             // ------------------------------------
 
-            $table->unsignedBigInteger('reported_by')->nullable(); // ID User Relasional (Opsional)
             $table->timestamp('created_at')->useCurrent();
             $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
             $table->timestamp('deleted_at')->nullable(); // Soft-delete mechanism

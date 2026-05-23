@@ -30,7 +30,7 @@ class DatabaseSeeder extends Seeder
         // Akun User Staf Lapangan
         DB::table('users')->insert([
             'name' => 'Yuda Staf Lapangan',
-            'email' => 'user@greenfields.com',
+            'email' => 'yuda@greenfields.com',
             'password' => Hash::make('123123123'),
             'role' => 'user',
             'created_at' => Carbon::now(),
